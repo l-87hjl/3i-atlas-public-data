@@ -1,0 +1,86 @@
+SIGMA UNCERTAINTY INTERPRETATION — JPL HORIZONS
+
+This document defines the correct interpretation and statistical use of
+sigma-based positional uncertainty values returned by the JPL Horizons
+ephemeris system.
+
+The purpose of this file is to prevent misinterpretation of RA/DEC
+uncertainties and to specify the proper method for testing positional
+consistency using the plane-of-sky error ellipse.
+
+------------------------------------------------------------
+CORE DEFINITIONS
+------------------------------------------------------------
+
+RA_3SIGMA
+Formal ±3σ uncertainty in Right Ascension.
+Units: arcseconds.
+Represents orbit covariance uncertainty in the predicted position.
+NOT observational measurement error.
+
+DEC_3SIGMA
+Formal ±3σ uncertainty in Declination.
+Units: arcseconds.
+Represents orbit covariance uncertainty in the predicted position.
+NOT observational measurement error.
+
+These quantities describe uncertainty in the propagated orbital solution
+and assume random, Gaussian-distributed errors.
+
+------------------------------------------------------------
+ERROR ELLIPSE PARAMETERS
+------------------------------------------------------------
+
+SMAA_3SIG
+Semi-major axis of the 3σ plane-of-sky error ellipse.
+Units: arcseconds.
+Represents the direction of maximum positional uncertainty.
+
+SMIA_3SIG
+Semi-minor axis of the 3σ plane-of-sky error ellipse.
+Units: arcseconds.
+Represents the direction of minimum positional uncertainty.
+
+THETA
+Orientation angle of the error ellipse.
+Measured CLOCKWISE from the direction of increasing Right Ascension
+toward the semi-major axis, in the direction of increasing Declination.
+Units: degrees.
+
+The error ellipse summarizes the full correlated positional uncertainty
+projected onto the plane perpendicular to the observer’s line of sight.
+
+------------------------------------------------------------
+CORRECT STATISTICAL USAGE
+------------------------------------------------------------
+
+• RA_3SIGMA and DEC_3SIGMA must NOT be treated as independent,
+  axis-aligned confidence bounds.
+
+• Proper positional consistency testing requires use of the rotated
+  error ellipse defined by SMAA_3SIG, SMIA_3SIG, and THETA.
+
+• Given a positional residual vector (dx, dy):
+
+  1. Rotate the residual by angle THETA.
+  2. Normalize by the ellipse axes:
+     sqrt( (dx_rot / SMAA_3SIG)^2 + (dy_rot / SMIA_3SIG)^2 )
+  3. If result < 1.0 → residual lies INSIDE the 3σ boundary.
+  4. If result ≥ 1.0 → residual lies OUTSIDE the 3σ boundary.
+
+This method correctly accounts for correlated uncertainties between
+Right Ascension and Declination.
+
+------------------------------------------------------------
+IMPORTANT CAVEATS
+------------------------------------------------------------
+
+• All sigma values are formal uncertainties derived from orbit covariance.
+• They assume Gaussian error propagation.
+• Systematic biases or unmodeled forces may cause true uncertainty to be
+  larger than reported.
+• Exceeding a 3σ boundary does NOT, by itself, imply physical anomaly.
+
+------------------------------------------------------------
+END OF INTERPRETATION FILE
+------------------------------------------------------------
