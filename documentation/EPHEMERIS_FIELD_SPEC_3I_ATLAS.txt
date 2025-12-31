@@ -1,0 +1,90 @@
+EPHEMERIS FIELD SPECIFICATION — 3I/ATLAS
+
+This document defines the ephemeris fields extracted from JPL Horizons
+for positional residual and uncertainty analysis of the interstellar
+object designated 3I/ATLAS.
+
+The listed fields represent the minimum required set to:
+• compare predicted vs observed astrometry
+• evaluate motion consistency
+• correctly assess positional uncertainty using the plane-of-sky error ellipse
+
+All quantities are extracted directly from Horizons outputs without
+numerical modification unless explicitly stated.
+
+------------------------------------------------------------
+REQUIRED FIELDS
+------------------------------------------------------------
+
+1. UTC_TIME
+   Coordinated Universal Time of the ephemeris record.
+   Format preserved exactly as returned by Horizons.
+
+2. RA_ICRF
+   Right Ascension in the International Celestial Reference Frame.
+   Sexagesimal format: HH MM SS.sss
+
+3. DEC_ICRF
+   Declination in the International Celestial Reference Frame.
+   Sexagesimal format: ±DD MM SS.ss
+
+4. DRA_COSDEC
+   Time derivative of Right Ascension multiplied by cos(DEC).
+   Units: arcseconds per hour.
+   Represents projected angular motion in RA.
+
+5. DDEC_DT
+   Time derivative of Declination.
+   Units: arcseconds per hour.
+
+------------------------------------------------------------
+UNCERTAINTY AND ERROR ELLIPSE FIELDS
+------------------------------------------------------------
+
+6. RA_3SIGMA
+   Formal ±3σ uncertainty in Right Ascension.
+   Units: arcseconds.
+   Represents orbit covariance uncertainty in the predicted position.
+   NOT observational measurement error.
+
+7. DEC_3SIGMA
+   Formal ±3σ uncertainty in Declination.
+   Units: arcseconds.
+   Represents orbit covariance uncertainty in the predicted position.
+   NOT observational measurement error.
+
+8. SMAA_3SIG
+   Semi-major axis of the 3σ plane-of-sky error ellipse.
+   Units: arcseconds.
+   Represents the direction of maximum positional uncertainty.
+
+9. SMIA_3SIG
+   Semi-minor axis of the 3σ plane-of-sky error ellipse.
+   Units: arcseconds.
+   Represents the direction of minimum positional uncertainty.
+
+10. THETA
+    Orientation angle of the error ellipse.
+    Measured CLOCKWISE from the direction of increasing RA
+    toward the semi-major axis, in the direction of increasing DEC.
+    Units: degrees.
+
+------------------------------------------------------------
+INTERPRETATION NOTES
+------------------------------------------------------------
+
+• RA_3SIGMA and DEC_3SIGMA are projections of the orbit covariance and
+  must NOT be treated as independent axis-aligned confidence bounds.
+
+• The correct statistical comparison of residuals requires use of the
+  rotated error ellipse defined by SMAA_3SIG, SMIA_3SIG, and THETA.
+
+• Proper evaluation requires rotating the residual vector by THETA and
+  testing whether it falls inside the normalized ellipse boundary.
+
+• All uncertainty values assume Gaussian error propagation and may be
+  optimistic if systematic biases are present.
+
+------------------------------------------------------------
+END OF SPECIFICATION
+------------------------------------------------------------
