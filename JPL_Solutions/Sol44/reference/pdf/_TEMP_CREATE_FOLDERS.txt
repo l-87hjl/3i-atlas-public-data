@@ -1,0 +1,7 @@
+TEMP FILE — FOLDER BOOTSTRAP
+
+This file exists only to force GitHub to create the nested folder structure:
+JPL_Solutions/Sol44/horizons/derived_matching/
+
+Once real files are uploaded into this directory (or its siblings), this file
+may be deleted.
