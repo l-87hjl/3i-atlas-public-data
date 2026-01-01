@@ -1,0 +1,254 @@
+Timestamp Integrity
+
+Project: 3I / ATLAS (C/2025 N1)
+
+This document enumerates known, high-risk timestamp failure modes when aligning MPC/MPEC astrometric observations with JPL Horizons (W50) ephemeris data. It is intentionally pre-calculation and focuses only on data interpretation, normalization, and alignment risks.
+
+
+---
+
+1. Time Standards Involved
+
+1.1 MPEC / MPC Observation Times
+
+Reported in UTC
+
+Precision is observational, not mathematical
+
+Often recorded as:
+
+Date + fractional day, or
+
+HH:MM:SS with limited decimals
+
+
+
+Important: MPC timestamps represent reported observation times, not guaranteed mid-exposure instants unless explicitly stated.
+
+
+---
+
+1.2 JPL Horizons / W50 Ephemeris Times
+
+Computed in TDB (Barycentric Dynamical Time)
+
+Arbitrary numerical precision
+
+Continuous mathematical evaluation points
+
+
+Important: Horizons times are not observational records and do not encode shutter timing or exposure duration.
+
+
+---
+
+2. Fundamental Mismatch
+
+MPEC and Horizons data differ in both time scale and precision semantics:
+
+MPEC	Horizons
+
+UTC	TDB
+Observational precision	Arbitrary precision
+Discrete	Continuous
+Human-reported	Dynamical computation
+
+
+For a fast interstellar object (~65–70 km/s):
+
+1 second ≈ 65–70 km
+
+0.1 sec ≈ 6–7 km
+
+1 ms ≈ 65–70 meters
+
+
+Small timestamp misinterpretations can therefore create meaningful angular residuals.
+
+
+---
+
+3. Known Timestamp Failure Modes
+
+3.1 UTC ↔ TDB Conversion Errors
+
+Failure Mode
+
+Treating UTC timestamps as if already TDB
+
+Applying conversion inconsistently or implicitly
+
+
+Effect
+
+Systematic residual offsets
+
+Apparent along-track acceleration
+
+
+Mitigation
+
+Perform UTC → TDB conversion in exactly one documented step
+
+Preserve original timestamps unchanged
+
+
+Recommended Columns
+
+timestamp_utc_original
+
+timestamp_tdb_converted
+
+timestamp_used_for_match
+
+
+
+---
+
+3.2 Fractional Day Parsing Errors
+
+Failure Mode
+
+Misinterpreting MPC fractional days
+
+Off-by-one-day boundary errors
+
+
+Effect
+
+Minute-to-hour misalignments
+
+Catastrophic but sometimes subtle
+
+
+Mitigation
+
+Normalize all MPC times to ISO-8601 UTC strings
+
+Manually spot-check several random rows
+
+
+
+---
+
+3.3 Over-Precision Illusion
+
+Failure Mode
+
+Matching coarse observation times against high-precision ephemeris values
+
+Treating interpolated values as more precise than the observation supports
+
+
+Effect
+
+Noise masquerading as signal
+
+Artificially inflated confidence
+
+
+Mitigation
+
+Never interpolate or compare beyond observational time precision
+
+Treat time uncertainty as an explicit error source
+
+
+
+---
+
+3.4 Interpolation Step Misalignment
+
+Failure Mode
+
+Interpolating between ephemeris steps without validating curvature effects
+
+
+Effect
+
+Small but systematic RA/DEC biases
+
+
+Mitigation
+
+Use bracketing ephemeris points for validation
+
+Confirm interpolation deltas are within expected timing uncertainty
+
+
+
+---
+
+3.5 Exposure Timing Ambiguity
+
+Failure Mode
+
+Assuming reported time equals mid-exposure
+
+
+Effect
+
+Directional residual bias correlated with observatory
+
+
+Mitigation
+
+Default assumption: reported time ≈ mid-exposure
+
+Document this assumption explicitly
+
+
+
+---
+
+4. Timestamp Validation Checklist
+
+Before performing residual calculations:
+
+1. Confirm MPEC timestamps are UTC
+
+
+2. Confirm Horizons timestamps are TDB
+
+
+3. Verify a single explicit UTC→TDB conversion step
+
+
+4. Preserve original timestamps unchanged
+
+
+5. Validate fractional day parsing
+
+
+6. Limit interpolation to observational precision
+
+
+7. Validate against bracketing ephemeris
+
+
+8. Document exposure-time assumptions
+
+
+
+If all checks pass, timestamp integrity is considered sound.
+
+
+---
+
+5. Scope Note
+
+This document addresses timestamp integrity only. It does not assess:
+
+Astrometric calculations
+
+Residual computation
+
+Sigma or covariance interpretation
+
+
+Those concerns are handled in separate documents.
+
+
+---
+
+Status: Locked reference
