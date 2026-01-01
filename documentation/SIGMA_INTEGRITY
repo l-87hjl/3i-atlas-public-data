@@ -1,0 +1,285 @@
+Sigma Handling Integrity
+
+Project: 3I / ATLAS (C/2025 N1)
+
+This document enumerates high-risk failure modes in interpreting and applying JPL Horizons sigma uncertainty fields during plane-of-sky consistency checks. It is focused on correct field interpretation and data hygiene, not on validating any particular residual result.
+
+Reference definitions (project-locked):
+
+SIGMA_UNCERTAINTY_INTERPRETATION_JPL_HORIZONS.txt
+
+EPHEMERIS_FIELD_SPEC_3I_ATLAS.txt
+
+
+
+---
+
+1. What the Horizons “Sigmas” Are (and Are Not)
+
+1.1 What they are
+
+Formal propagated uncertainties derived from the orbit covariance of the referenced solution (e.g., Sol44).
+
+Reported as ±3σ values (not 1σ).
+
+Units: arcseconds.
+
+
+1.2 What they are not
+
+Not observational measurement errors.
+
+Not evidence that a telescope was “wrong” if residuals exceed them.
+
+Not guaranteed to bound reality if systematics / unmodeled forces exist.
+
+
+
+---
+
+2. Required Uncertainty Fields (W50 / Horizons)
+
+For uncertainty-aware comparisons, you need the full ellipse set, not only axis-wise sigmas:
+
+RA_3SIGMA (arcsec)
+
+DEC_3SIGMA (arcsec)
+
+SMAA_3SIG (arcsec)
+
+SMIA_3SIG (arcsec)
+
+THETA (deg)
+
+
+Non-negotiable rule: RA_3SIGMA and DEC_3SIGMA must not be treated as independent, axis-aligned confidence bounds.
+
+
+---
+
+3. The Most Common Sigma Failure Modes
+
+3.1 Using RA_3SIGMA / DEC_3SIGMA as an axis-aligned box
+
+Failure Mode
+
+Checking “|ΔRA| < RA_3SIGMA and |ΔDEC| < DEC_3SIGMA” as a 3σ test.
+
+
+Why it breaks
+
+RA and DEC uncertainties are generally correlated.
+
+Horizons provides a rotated error ellipse for a reason.
+
+
+Mitigation
+
+Always use the ellipse (SMAA_3SIG, SMIA_3SIG, THETA) for pass/fail.
+
+
+
+---
+
+3.2 Mixing RA vs RA·cos(DEC)
+
+Failure Mode
+
+Using raw ΔRA (in arcsec) but comparing to a quantity that implicitly assumes ΔRA·cos(DEC), or vice versa.
+
+
+Why it breaks
+
+On the sky, the RA axis is scaled by cos(DEC). Without that scaling, the RA component is overstated at high |DEC|.
+
+
+Mitigation
+
+Choose one convention and lock it:
+
+Plane-of-sky convention: treat the residual vector as (ΔRA·cosDEC, ΔDEC) in arcseconds.
+
+Ensure the ellipse test uses the same convention.
+
+
+
+Red flag
+
+Residual magnitudes inflate with declination in a way that tracks 1/cos(DEC).
+
+
+
+---
+
+3.3 Misreading THETA orientation / rotation sign
+
+Failure Mode
+
+Treating THETA as counterclockwise when it is clockwise.
+
+Rotating the residual vector in the wrong direction.
+
+
+Correct definition
+
+THETA is measured CLOCKWISE from the direction of increasing RA toward the semi-major axis, in the direction of increasing DEC.
+
+
+Mitigation
+
+Implement rotation once, then validate with a known synthetic test:
+
+If THETA = 0, semi-major axis must align with +RA direction.
+
+If THETA = 90, semi-major axis must align with +DEC direction.
+
+
+
+
+---
+
+3.4 Treating 3σ values as 1σ
+
+Failure Mode
+
+Plugging SMAA_3SIG and SMIA_3SIG into formulas that assume 1σ.
+
+
+Mitigation
+
+Decide which boundary you are testing:
+
+3σ boundary test: use SMAA_3SIG, SMIA_3SIG directly.
+
+1σ ellipse: divide both axes by 3.
+
+
+
+Red flag
+
+“Most points are outside 3σ” for a well-fit solution with dense observations—often indicates a scaling error.
+
+
+
+---
+
+3.5 Unit confusion (arcseconds vs degrees vs seconds-of-time)
+
+Failure Mode
+
+Converting sexagesimal RA residuals incorrectly.
+
+
+Mitigation
+
+Lock conversions:
+
+1 hour of RA = 15 degrees
+
+1 second of RA time = 15 arcseconds (of angle) before applying cos(DEC) scaling.
+
+
+
+Red flag
+
+Residuals off by factors near 15, 3600, or ~cos(DEC).
+
+
+
+---
+
+4. Correct “Inside the Ellipse” Test (Conceptual)
+
+Given a plane-of-sky residual vector:
+
+dx = ΔRA·cos(DEC) in arcseconds
+
+dy = ΔDEC in arcseconds
+
+
+Steps:
+
+1. Rotate (dx, dy) by THETA (using the correct clockwise convention).
+
+
+2. Normalize by ellipse axes:
+
+u = dx_rot / SMAA_3SIG
+
+v = dy_rot / SMIA_3SIG
+
+
+
+3. Compute: rho = sqrt(u^2 + v^2)
+
+
+4. Interpret:
+
+rho < 1 → inside the 3σ ellipse
+
+rho >= 1 → outside the 3σ ellipse
+
+
+
+
+Note: this is a covariance-consistency check, not a proof of anomaly.
+
+
+---
+
+5. Data Integrity Checklist (Sigma Fields)
+
+Before trusting any uncertainty-aware comparison:
+
+1. Confirm the Horizons output actually includes:
+
+RA_3SIGMA, DEC_3SIGMA, SMAA_3SIG, SMIA_3SIG, THETA
+
+
+
+2. Confirm all sigma/ellipse axes are in arcseconds.
+
+
+3. Confirm THETA is interpreted as clockwise.
+
+
+4. Confirm your residual vector is consistently either:
+
+(ΔRA·cosDEC, ΔDEC) or (ΔRA, ΔDEC) (and the ellipse math matches that choice).
+
+
+
+5. Confirm you are treating the values as 3σ unless explicitly rescaled.
+
+
+6. Spot-check a few rows:
+
+SMAA_3SIG ≥ SMIA_3SIG (should generally hold)
+
+THETA within a sensible range (typically 0–180 or 0–360 depending on output format)
+
+
+
+
+If all checks pass, sigma-field handling is considered structurally sound.
+
+
+---
+
+6. Scope Note
+
+This document does not validate:
+
+whether a specific residual is correct
+
+whether a given solution’s covariance is realistic
+
+whether non-gravitational modeling is adequate
+
+
+It only prevents misinterpretation of Horizons uncertainty fields.
+
+
+---
+
+Status: Locked reference
