@@ -1,0 +1,297 @@
+INTERPOLATION_INTEGRITY.md
+
+Scope
+
+This document enumerates non-mathematical failure modes associated with time interpolation between JPL Horizons ephemeris outputs and MPC/MPEC astrometric observations for 3I / C/2025 N1 (ATLAS). It is intended to prevent silent logic errors before any residuals or conclusions are computed.
+
+This document assumes:
+
+MPC/MPEC observations are authoritative for observation timestamps
+
+JPL Horizons ephemerides are authoritative for modeled positions
+
+Residuals require mapping the two onto a common temporal frame
+
+
+
+---
+
+1. Bracketing vs Interpolated Ephemerides
+
+Description
+
+There are two fundamentally different ephemeris strategies:
+
+Bracketing ephemeris: raw Horizons outputs at fixed cadence (e.g., 1 min, 5 min)
+
+Interpolated ephemeris: positions computed between two Horizons timestamps
+
+
+These are not interchangeable.
+
+Failure Mode
+
+Treating interpolated values as if they were raw Horizons outputs
+
+Forgetting that interpolation introduces assumptions about motion smoothness
+
+
+What to Check
+
+Confirm whether a row originated from Horizons directly or from interpolation logic
+
+Ensure interpolated rows are explicitly labeled as such
+
+Never mix raw and interpolated rows without metadata
+
+
+
+---
+
+2. Linear Interpolation Assumptions
+
+Description
+
+Most pipelines default to linear interpolation in RA and DEC.
+
+This assumes:
+
+Constant angular velocity over the interval
+
+No curvature in apparent motion over that time span
+
+
+This assumption degrades as:
+
+Cadence increases (e.g., >1 minute)
+
+Object velocity increases (true for 3I)
+
+Topocentric effects dominate
+
+
+Failure Mode
+
+Using linear interpolation over too-long intervals
+
+Applying the same interpolation tolerance everywhere
+
+
+What to Check
+
+Interpolation interval length (seconds)
+
+Object angular speed at that epoch
+
+Whether interpolation error could rival or exceed reported sigma
+
+
+
+---
+
+3. Time Anchoring Errors
+
+Description
+
+Interpolation requires anchoring the observation timestamp between two ephemeris rows.
+
+Failure Modes
+
+Using the wrong bracketing rows
+
+Off-by-one errors (selecting rows that do not actually bound the observation)
+
+Interpolating outside the bracket due to rounding
+
+
+What to Check
+
+Observation timestamp must satisfy: t_left ≤ t_obs ≤ t_right
+
+Bracketing rows must be consecutive in Horizons output
+
+Time deltas must be computed in the same time scale (TDB)
+
+
+
+---
+
+4. Exposure-Time Ambiguity
+
+Description
+
+MPC timestamps typically represent:
+
+Mid-exposure time (most common)
+
+Occasionally start or end time (rare, but dangerous)
+
+
+Horizons positions are instantaneous.
+
+Failure Mode
+
+Treating timestamp as instantaneous when it represents an exposure midpoint
+
+Misaligning by ±(exposure/2)
+
+
+What to Check
+
+MPC observatory metadata for exposure conventions
+
+Whether exposure durations are available or assumed
+
+Whether mid-exposure assumption is documented and consistent
+
+
+
+---
+
+5. Precision Illusion During Interpolation
+
+Description
+
+Interpolated outputs often carry:
+
+Full double-precision decimals
+
+Artificially high apparent precision
+
+
+This can exceed the actual temporal or astrometric precision of the source data.
+
+Failure Mode
+
+Treating interpolated decimals as meaningful at sub-millisecond or micro-arcsecond scales
+
+Over-weighting tiny residuals that are interpolation artifacts
+
+
+What to Check
+
+Cap effective precision to MPC timestamp resolution
+
+Track significant figures explicitly
+
+Flag interpolated precision beyond data support
+
+
+
+---
+
+6. Coordinate-Space Interpolation Mistakes
+
+Description
+
+Interpolation must respect coordinate semantics:
+
+RA is angular and wraps at 24h / 360°
+
+DEC is linear
+
+
+Failure Modes
+
+Interpolating RA across wrap boundaries incorrectly
+
+Interpolating RA instead of RA·cos(DEC)
+
+Mixing degrees, hours, arcseconds during interpolation
+
+
+What to Check
+
+RA wrap handling
+
+Unit normalization before interpolation
+
+Consistent coordinate representation
+
+
+
+---
+
+7. Cadence Mismatch
+
+Description
+
+Using ephemerides at fixed cadence (e.g., 1 minute) to match irregular MPC timestamps.
+
+Failure Mode
+
+Assuming 1-minute cadence is always sufficient
+
+Ignoring fast sky-plane motion
+
+
+What to Check
+
+Worst-case angular displacement per minute
+
+Whether cadence should be tightened near close approaches
+
+
+
+---
+
+8. Interpolation Error vs Sigma Scale
+
+Description
+
+Interpolation error must be small relative to sigma, or it contaminates residuals.
+
+Failure Mode
+
+Residuals dominated by interpolation error rather than observational error
+
+
+What to Check
+
+Upper bound interpolation error estimate
+
+Compare against 1σ and 3σ thresholds
+
+Flag regimes where interpolation uncertainty is non-negligible
+
+
+
+---
+
+9. Required Metadata for Interpolated Rows
+
+Every interpolated ephemeris row must carry:
+
+Source ephemeris file ID
+
+Left/right bracket timestamps
+
+Interpolation method
+
+Interpolation interval length
+
+Time scale (TDB)
+
+
+Missing metadata = unverifiable row.
+
+
+---
+
+10. Red Flags Checklist
+
+🚩 Residuals improve when cadence tightens 🚩 Residuals correlate with time offset 🚩 Sub-sigma residual structure disappears when using raw Horizons times 🚩 Interpolated precision exceeds MPC timestamp precision
+
+
+---
+
+Status
+
+This document addresses interpolation integrity only.
+
+No conclusions about residuals, anomalies, or physical interpretation should be drawn until all checks here are satisfied.
+
+
+---
+
+Lock this document before proceeding to residual analysis.
